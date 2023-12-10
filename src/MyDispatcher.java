@@ -11,7 +11,7 @@ public class MyDispatcher extends Dispatcher {
         super(algorithm, hosts);
     }
 
-    // implement logic of my dispatcher
+    // send task to a host based on algorithm policy
     @Override
     public synchronized void addTask(Task task) {
         switch (algorithm) {
@@ -22,7 +22,7 @@ public class MyDispatcher extends Dispatcher {
         }
     }
 
-    // implement logic of RoundRobin policy
+    // RoundRobin policy
     public synchronized void RoundRobin(Task task) {
         // System.out.println("Dispatcher : " + task);
         int nextHost = (lastHost + 1) % hosts.size();
@@ -30,9 +30,10 @@ public class MyDispatcher extends Dispatcher {
         lastHost = nextHost;
     }
 
-    // implement logic of ShortestQueue policy
+    // ShortestQueue policy
     public synchronized void ShortestQueue(Task task){
         // System.out.println("Dispatcher : " + task);
+
         // index of host with minimum id and minimum queue size
         int index = 0;
 
@@ -58,7 +59,7 @@ public class MyDispatcher extends Dispatcher {
         hosts.get(index).addTask(task);
     }
 
-    // implement logic of SizeIntervalTaskAssignment policy
+    // SizeIntervalTaskAssignment policy
     public synchronized void SizeIntervalTaskAssignment(Task task){
         switch(task.getType()) {
             case SHORT -> hosts.get(0).addTask(task);
@@ -67,9 +68,10 @@ public class MyDispatcher extends Dispatcher {
         }
     }
 
-    // implement logic of LeastWorkLeft policy
+    // LeastWorkLeft policy
     public synchronized void LeastWorkLeft(Task task){
-        // System.out.println("[INFO] Dispatcher : " + task);
+        // System.out.println("Dispatcher : " + task);
+
         // index of host with minimum id and minimum calculation of work left
         int index = 0;
 
@@ -77,7 +79,6 @@ public class MyDispatcher extends Dispatcher {
         long minWork = hosts.get(0).getWorkLeft();
         // find minimum queue size
         for(Host host : hosts){
-            // System.out.println("Host work left : " + host.getId() + " -> work : " + host.getWorkLeft());
             if(host.getWorkLeft() < minWork){
                 minWork = host.getWorkLeft();
             }

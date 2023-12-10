@@ -1,19 +1,16 @@
 import java.util.Comparator;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
-import java.util.LinkedList;
-import java.util.Queue;
+
 
 public class MyHost extends Host {
 
     // for PriorityBlockingQueue
     private static class TaskPriorityComp implements Comparator<Task> {
         public int compare(Task t1, Task t2) {
-            // Compare based on priority
+            // compare based on priority
             int priorityComparison = Integer.compare(t2.getPriority(), t1.getPriority());
 
-            // If priorities are the same, compare based on arrival time
+            // compare based on start time, if priority is the same
             if (priorityComparison == 0) {
                 return Integer.compare(t1.getStart(), t2.getStart());
             }
@@ -22,21 +19,24 @@ public class MyHost extends Host {
         }
     }
 
-    // unique per host
-    private final PriorityBlockingQueue<Task> queue = new PriorityBlockingQueue<>(100, new TaskPriorityComp());
+    // priority blocking queue
+    private final PriorityBlockingQueue<Task> queue = new PriorityBlockingQueue<>(1000, new TaskPriorityComp());
+
+    // lock for queue
     private final Object lock = new Object();
+    // running flag
     private volatile boolean isRunning = true;
-
+    // thread running flag
     private volatile int haveThread = 0;
-
+    // task running
     private volatile Task globalTask;
-
+    // time start and end
     private volatile double timeStart = 0;
     private volatile double timeEnd = 0;
 
     @Override
     public void run() {
-        System.out.println("I'm running...(" + this.getId() + ")");
+        // System.out.println("I'm running...(" + this.getId() + ")");
 
         while (isRunning) {
             haveThread = 0;
@@ -67,17 +67,17 @@ public class MyHost extends Host {
             }
         }
 
+        long diff = Math.round(timeEnd - timeStart);
         // System.out.println("[START TIME] : " + timeStart);
         // System.out.println("[END TIME] : " + timeEnd);
-        long diff = Math.round(timeEnd - timeStart);
         // System.out.println("[DIFF] : " + diff);
 
         if(diff * 1000 < this.globalTask.getLeft()) {
             this.globalTask.setLeft(this.globalTask.getLeft() - 1000 * diff);
-            // System.out.println("[REMAIN TIME] : " + this.globalTask.getLeft());
             synchronized (lock) {
-                queue.offer(this.globalTask);
+                queue.offer(this.globalTask); // push task back to queue
             }
+            // return;
         }
 
         globalTask.finish(); // finish task
@@ -85,13 +85,13 @@ public class MyHost extends Host {
 
     @Override
     public void addTask(Task task) {
-        // System.out.println("[INFO] Host : " + this.getId() + " -> task : " + task.getId());
+        // System.out.println("Host : " + this.getId() + " -> task : " + task.getId());
 
         // if we have a task
         if(this.globalTask != null) {
             // and is preemptive
             if(this.globalTask.isPreemptible()) {
-                System.out.println("Task " + this.globalTask.getId() + " is preemptive");
+                // System.out.println("Task " + this.globalTask.getId() + " is preemptive");
 
                 synchronized (lock) {
                     queue.add(task); // add task to queue
@@ -116,28 +116,27 @@ public class MyHost extends Host {
     @Override
     public long getWorkLeft() {
         synchronized (lock) {
-            if (this.globalTask == null) {
-                return queue.stream().mapToLong(Task::getLeft).sum();
-            } else{
-                double timerIs = Timer.getTimeDouble();
-                // System.out.println("----------> [TIME IS : " + timerIs + "]");
-                long difference = Math.round(Timer.getTimeDouble() - timeStart);
-                // System.out.println("----------> [DIFFERENCE IS : " + difference + "]");
-                long remaining = Math.round(this.globalTask.getLeft() - 1000 * difference);
-                // System.out.println("----------> [REMAINING IS : " + remaining + "]");
-                long sum = queue.stream().mapToLong(Task::getLeft).sum();
-                // System.out.println("----------> [SUM IS : " + sum + "]");
-                // System.out.println("----------> [FINAL IS : " + (sum + remaining / 1000 * 1000) + "]");
-                // System.out.println();
-                return sum + remaining / 1000 * 1000;
+            // calculate work left
+            long workLeft = 0;
+            for (Task task : queue) {
+                workLeft += task.getLeft();
             }
 
+            if (this.globalTask == null) {
+                // if we don't have a task
+                return workLeft;
+            } else {
+                // if we have a task
+                long difference = Math.round(Timer.getTimeDouble() - timeStart);
+                long remaining = Math.round(this.globalTask.getLeft() - 1000 * difference);
+                return workLeft + remaining / 1000 * 1000; // round to seconds
+            }
         }
     }
 
     @Override
     public void shutdown() {
-        System.out.println("Shutting down...(" + this.getId() + ")");
+        // System.out.println("Shutting down...(" + this.getId() + ")");
         isRunning = false;
     }
 }
