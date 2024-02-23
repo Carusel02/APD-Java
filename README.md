@@ -1,6 +1,6 @@
 # README 
-##### MARIN MARIUS DANIEL 332CC
 ## [Tema2 - APD](https://gitlab.cs.pub.ro/apd/tema2)
+##### MARIN MARIUS DANIEL 332CC
 
 ### Ideea de baza
 Modificarea clasei `MyDispacher` ce are ca rol impartirea
